@@ -1,0 +1,19 @@
+{
+    "log_level": "WARN",
+    "podris_server": "",
+    "podris_token": "",
+    "map_tile_server": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/WMTS/tile/1.0.0/Canvas_World_Dark_Gray_Base/default/default028mm/{z}/{y}/{x}/",
+    "ipconfig": {"force_use": false, "address": "0.0.0.0", "region": "UNKNOWN", "location": [0, 0]},
+    "ui": {
+        "eqhistory_control_width": 290
+    },
+    "eew": {
+        "p_wave_border": 2,
+        "s_wave_border": 2,
+        "p_wave_color": "#0000FF",
+        "s_wave_color": "#e60000",
+        "wave_drawing_frame": 15,
+        "epicenters_alternate_display_interval": 10,
+        "eew_display_time_delay": 5
+    }
+}
