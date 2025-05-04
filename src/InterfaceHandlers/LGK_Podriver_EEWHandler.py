@@ -252,7 +252,9 @@ async def handler(event_id: int):
         i = i if i < 12 else 12
         i = i if i > 0 else 0
         timeout = get_earthquake_active_time(data) + c["eew"]["eew_display_time_delay"]
-        if timeout == c["eew"]["eew_display_time_delay"]:
+        if timeout > 0:
+            timeout = timeout if timeout <= c["eew"]["eew_display_time_delay"] else timeout * 2 / 3 + c["eew"]["eew_display_time_delay"]
+        else:
             output.warn(f"Handler EEW data timeout suddenly: {data}")
             a.get("eew_handlers").pop(event_id)
             return # 过去的地震

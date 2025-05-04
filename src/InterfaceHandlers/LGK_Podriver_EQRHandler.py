@@ -176,7 +176,7 @@ def get_eew_control(data: dict):
     data["report_history"].append(data) # 最后一报也需要生成
     for report in list(reversed(data["report_history"])): # 新报在前旧报在后
         # 生成历史报的逻辑与生成地震报告的差不多, 只是需要将其数据源改为"第X报"
-        report["event_source"] = f"No.{str(report["report_num"])}"
+        report["event_source"] = f"{source} No.{str(report["report_num"])}"
         eew_reports_controls.append(get_eqr_control(report))
     # 生成这次预警的整个可展开控件
     return ft.ExpansionTile(

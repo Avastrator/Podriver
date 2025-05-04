@@ -10,8 +10,7 @@ import json
 import brotli
 import asyncio
 import time
-
-import websockets.connection
+import socket
 
 import LGK_Podriver_Args as a
 import InterfaceHandlers.LGK_Podriver_EQRHandler as eqr
@@ -23,6 +22,16 @@ output = a.get("logger")
 
 a.set("eew_handlers", {})
 a.set("eew_handler_queues", {})
+
+# Get IP address
+try:
+    ip_address = socket.gethostbyname(c["podris_server"]["host"])
+    output.info(f"Podris Server [{c["podris_server"]["host"]}] IP address: {ip_address}")
+except socket.gaierror as e:
+    output.error(f"Failed to get Podris Server [{c["podris_server"]["host"]}] IP address: {e}")
+    raise e
+
+ws_url = f"ws://{ip_address}:{str(c["podris_server"]["port"])}"
 
 async def handler_manager(data):
     """
@@ -56,15 +65,15 @@ async def receiver():
     def decoder(data):
         return json.loads(str(brotli.decompress(base64.b64decode(data)).decode("utf-8")))
     
-    await asyncio.sleep(5) # wait for app launch
+    await asyncio.sleep(3) # wait for app launch
     while True:
         try:
-            async with websockets.connect(c["podris_server"], additional_headers=[("Authorization", f"Bearer {c["podris_token"]}")]) as websocket:
+            async with websockets.connect(ws_url, additional_headers=[("Authorization", f"Bearer {c["podris_token"]}")]) as websocket:
                 # Handshake
                 message = await websocket.recv()
                 data = decoder(message)
                 if "ver" in data:
-                    output.info(f"Connected to Podris Server! Server Version: {data['ver']} Delay: {str((time.time_ns() // 1000000) - data["time"])}ms")
+                    output.info(f"Connected to Podris Server! Server Version: {data['ver']}, latency: {str((time.time_ns() // 1000000) - data["time"])}ms")
                     a.set("ws_retrytime", 0) # Reset retry time
                     for i in data["active_eew"]:
                         asyncio.create_task(handler_manager(i))

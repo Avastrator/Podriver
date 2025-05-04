@@ -56,12 +56,12 @@ def get_earthquake_active_time(data: dict):
     else:
         at = t[-1][2] + (r - 2000) / 4 # 超出走时表的粗略计算就行了
         nt = at - (datetime.now() - datetime.strptime(data["time"], "%Y-%m-%d %H:%M:%S")).total_seconds()
-        return nt if nt > 0 else 0
+        return nt # 负数会在后面处理哒
     # 取表
     res = [sublist for sublist in t if sublist[0] == r]
     at = res[0][2]
     nt = at - (datetime.now() - datetime.strptime(data["time"], "%Y-%m-%d %H:%M:%S")).total_seconds()
-    return nt if nt > 0 else 0
+    return nt # 负数会在后面处理哒
 
 async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
     """

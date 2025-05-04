@@ -107,7 +107,8 @@ def app(page: ft.Page):
         initial_center=map.MapLatitudeLongitude(ipconfig["location"][0], ipconfig["location"][1]),
         initial_zoom=4.2,
         interaction_configuration=map.MapInteractionConfiguration(
-            flags=map.MapInteractiveFlag.ALL
+            flags=map.MapInteractiveFlag.ALL,
+            rotation_threshold=0,
         ),
         on_secondary_tap=lambda e: map_on_secondary_tap(),
         layers=[
