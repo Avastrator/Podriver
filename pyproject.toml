@@ -10,7 +10,7 @@ authors = [
 dependencies = [
   "flet",
   "flet_map",
-  "playsound",
+  "playsound==1.2.2",
   "websockets",
   "brotli",
   "aiohttp",

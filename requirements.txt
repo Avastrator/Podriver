@@ -1,0 +1,8 @@
+flet
+flet_map
+playsound==1.2.2
+websockets
+brotli
+aiohttp
+edge_tts
+certifi
