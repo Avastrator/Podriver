@@ -178,6 +178,6 @@ async def player(data: dict, effect: bool, tts: bool, eew_update: bool):
         tts_path = await get_tts(data)
         if tts_path:
             async with tts_lock:
-                asyncio.create_task(asyncio.to_thread(playsound, tts_path))
+                playsound(tts_path)
     if eew_update:
         asyncio.create_task(asyncio.to_thread(playsound, audios["eew"]["update"]))
