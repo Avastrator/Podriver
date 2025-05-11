@@ -40,10 +40,10 @@ def get_travel_timetable(depth: int):
         depth = 700
     return tt[str(depth)]
 
-def get_earthquake_active_time(data: dict):
-    t = get_travel_timetable(data["depth"])
+def get_travel_time(eqtime: str, depth: int, radius: int):
+    t = get_travel_timetable(depth)
     # 匹配对应影响半径, tjma2011的标准: 0-50内偶数, 50-200公差为五的数. 200-2000公差为十的数
-    r = int(data["impact_radius"])
+    r = int(radius)
     if r <= 50:
         if r % 2 == 0:
             r = r
@@ -55,13 +55,13 @@ def get_earthquake_active_time(data: dict):
         r = r // 10 * 10
     else:
         at = t[-1][2] + (r - 2000) / 4 # 超出走时表的粗略计算就行了
-        nt = at - (datetime.now() - datetime.strptime(data["time"], "%Y-%m-%d %H:%M:%S")).total_seconds()
-        return nt # 负数会在后面处理哒
+        nt = at - (datetime.now() - datetime.strptime(eqtime, "%Y-%m-%d %H:%M:%S")).total_seconds()
+        return nt
     # 取表
     res = [sublist for sublist in t if sublist[0] == r]
     at = res[0][2]
-    nt = at - (datetime.now() - datetime.strptime(data["time"], "%Y-%m-%d %H:%M:%S")).total_seconds()
-    return nt # 负数会在后面处理哒
+    nt = at - (datetime.now() - datetime.strptime(eqtime, "%Y-%m-%d %H:%M:%S")).total_seconds()
+    return nt
 
 async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
     """
@@ -72,6 +72,7 @@ async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
         i = -1
         last_r = 0
         last_circle = None
+        constant = False
         on_ground = True
         circle = map.CircleMarker(
             coordinates=map.MapLatitudeLongitude(data["location"][0], data["location"][1]),
@@ -87,6 +88,7 @@ async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 r, t  = tt[i][0] - last_r, tt[i][1] - (datetime.now() - start_time).total_seconds() # 获取当前走时半径与时间
             except IndexError:
                 r, t = 7, 1 # 走时表已用完, 接下来按匀速7km/s绘制
+                constant = True
             if t < 0: # 该走时已过时
                 if on_ground == False: # 地表地震波
                     if r == 2:
@@ -99,10 +101,12 @@ async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 circle.radius += 1000 * r
                 last_r = tt[i][0]
                 continue
-            last_r = tt[i][0]
+            if not constant:
+                last_r = tt[i][0]
             if r == 0: # 地震波还没到地表
                 on_ground = False
                 r = t * 7
+                t -= 1 # 抵消绘制中途的误差
                 circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["eew"]["p_wave_color"]), 0
                 sr = 1000 * (r / (t // sec_per_frame + 1))
                 for _ in range(int(t // sec_per_frame)):
@@ -141,6 +145,7 @@ async def swave(tt: list, data: dict, cc_queue: asyncio.Queue):
         i = -1
         last_r = 0
         last_circle = None
+        constant = False
         on_ground = True
         circle = map.CircleMarker(
             coordinates=map.MapLatitudeLongitude(data["location"][0], data["location"][1]),
@@ -156,6 +161,7 @@ async def swave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 r, t  = tt[i][0] - last_r, tt[i][2] - (datetime.now() - start_time).total_seconds()
             except IndexError:
                 r, t = 4, 1 # 走时表已用完, 接下来按匀速4km/s绘制
+                constant = True
             if t < 0: # 该走时已过时
                 if on_ground == False: # 地表地震波
                     if r == 2:
@@ -168,10 +174,12 @@ async def swave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 circle.radius += 1000 * r
                 last_r = tt[i][0]
                 continue
-            last_r = tt[i][0]
+            if not constant:
+                last_r = tt[i][0]
             if r == 0: # 地震波还没到地表
                 on_ground = False
                 r = t * 4
+                t -= 1 # 抵消绘制中途的误差
                 circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["eew"]["s_wave_color"]), 0
                 sr = 1000 * (r / (t // sec_per_frame + 1))
                 for _ in range(int(t // sec_per_frame)):

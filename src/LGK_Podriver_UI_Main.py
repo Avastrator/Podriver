@@ -7,11 +7,11 @@ By Avastrator
 
 import flet as ft
 import flet_map as map
-import os
 import asyncio
 from datetime import datetime
 
 import LGK_Podriver_Args as a
+from LGK_Podriver_Utils import safe_exit
 
 c = a.get("config")
 l = a.get("lang")
@@ -63,6 +63,15 @@ def app(page: ft.Page):
     page.dark_theme = ft.Theme(font_family="harmony_r", color_scheme_seed="GREY")
     page.theme_mode = ft.ThemeMode.DARK
 
+    # Safe exit
+    async def window_event(e):
+        if e.data == "close":
+            exiting = asyncio.create_task(asyncio.to_thread(safe_exit))
+            await asyncio.wait_for(exiting, timeout=60)
+            page.window.destroy()
+
+    page.window.prevent_close = True
+    page.window.on_event = window_event
     # AppBar
     page.appbar = ft.AppBar(
         title=ft.Text(
@@ -83,7 +92,6 @@ def app(page: ft.Page):
 
     async def appbar_handler(page: ft.Page):
         try:
-            # Get IP Configuration
             while True:
                     page.appbar.actions[0].update()
                     await asyncio.sleep(1)
@@ -202,5 +210,6 @@ def app(page: ft.Page):
         )
     )
 
+    
     # Update title time in real-time
     page.run_task(appbar_handler, page)

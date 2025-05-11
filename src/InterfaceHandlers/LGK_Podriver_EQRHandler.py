@@ -7,6 +7,7 @@ By Avastrator
 import flet as ft
 import flet_map as map
 import asyncio
+import math
 
 import LGK_Podriver_Args as a
 from InterfaceHandlers.LGK_Podriver_EEWHandler import get_epicenter_mark
@@ -42,11 +43,14 @@ def on_click(e, data: dict):
             )
         return markers
     lat, lon = data["location"]
-    a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(lat, lon), 8)
+    if data["event_type"] == "EEW":
+        zoom = max(min(8.2 - math.log(data["impact_radius"] / 100 + 1), 15), 4)
+        a.get("ref_map_eqr_areaint_layer").current.markers.append(get_epicenter_mark(data))
+    else:
+        zoom = 10
+    a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(lat, lon), zoom)
     a.get("ref_map_eqr_areaint_layer").current.markers.clear()
     a.get("ref_map_eqr_areaint_layer").current.markers.extend(get_int_markers(data))
-    if data["event_type"] == "EEW":
-        a.get("ref_map_eqr_areaint_layer").current.markers.append(get_epicenter_mark(data))
     a.get("ref_map_eqr_areaint_layer").current.update()
 
 def get_map_marker(data: dict):
@@ -124,7 +128,7 @@ def get_mix_control(data: dict):
     # 生成整个可展开控件
     return ft.ExpansionTile(
         controls=reports_controls,
-        tile_padding=ft.padding.all(0),
+        tile_padding=ft.Padding(0, 0, 0, 0),
         title=ft.Container(
                 ink=True,
                 on_click=lambda e, data=data: on_click(e, data),
@@ -175,13 +179,14 @@ def get_eew_control(data: dict):
     source = data["event_source"]
     data["report_history"].append(data) # 最后一报也需要生成
     for report in list(reversed(data["report_history"])): # 新报在前旧报在后
+        m_report = report.copy() # 疑似此处report与Audio模块共用一个内存, 导致修改会影响Audio模块, 此处进行浅复制
         # 生成历史报的逻辑与生成地震报告的差不多, 只是需要将其数据源改为"第X报"
-        report["event_source"] = f"{source} No.{str(report["report_num"])}"
+        m_report["event_source"] = f"{source} No.{str(report["report_num"])}"
         eew_reports_controls.append(get_eqr_control(report))
     # 生成这次预警的整个可展开控件
     return ft.ExpansionTile(
         controls=eew_reports_controls,
-        tile_padding=ft.padding.all(0),
+        tile_padding=ft.Padding(0, 0, 0, 0),
         title=ft.Container(
                 ink=True,
                 on_click=lambda e, data=data: on_click(e, data),
@@ -233,9 +238,9 @@ async def handler(data: dict, refresh=True):
 
     # 移除旧信息
     if event_id in eqr_list:
-        if eqr_list[event_id]["map_marker"]:
-            a.get("ref_map_eqr_marks_layer").current.markers.remove(eqr_list[event_id]["map_marker"])
         a.get("ref_eqlist_control").current.controls.remove(eqr_list[event_id]["control"])
+        if eqr_list[event_id]["map_marker"] != None:
+            a.get("ref_map_eqr_marks_layer").current.markers.remove(eqr_list[event_id]["map_marker"])
         del eqr_list[event_id]
 
     if data["event_type"] == "EQR" and "datas" not in data: # 处理单个地震报告
@@ -261,20 +266,19 @@ async def handler(data: dict, refresh=True):
         # 获取其在地震历史控件上的控件
         control = get_eew_control(data)
         # 记录在表中, EEW的ID需要加上EEW后缀, 避免与测定冲突
-        eqr_list[event_id] = {"map_marker": None, "control": control}
+        eqr_list[f"{event_id}EEW"] = {"map_marker": None, "control": control}
     else:
         # 卧槽给我干哪来了??这些类型都匹配不上那它传给我了个什么东西啊, 给个warn就算了
         output.warn(f"Unknown event: {str(data)}")
         return
     a.get("ref_eqlist_control").current.controls.insert(0, control)
-    a.get("ref_eqlist_control").current.controls = a.get("ref_eqlist_control").current.controls[:50] # 仅保留最新50个报
     # 刷新
     if refresh:
-        a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(data["location"][0], data["location"][1]), 8) # 聚焦地图中心
-        on_click(None, data)
         a.get("ref_eqlist_control").current.update()
         a.get("ref_map_eqr_marks_layer").current.update()
-        asyncio.create_task(player(data, True, True, False))
+        if not data["event_type"] == "EEW":
+            asyncio.create_task(player(data, True, True, False))
+            on_click(None, data)
     return
 
 async def eqlist_handler(data: list):

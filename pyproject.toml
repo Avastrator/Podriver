@@ -1,6 +1,6 @@
 [project]
 name = "Podriver"
-version = "0.1.0"
+version = "1.0.0-alpha.6"
 description = "Practical Online Disaster Reduction Intelligence ViewER"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -36,4 +36,4 @@ dev-dependencies = [
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-flet = {extras = ["all"], version = "0.27.6"}
+flet = {extras = ["all"], version = "0.28.1"}

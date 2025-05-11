@@ -51,8 +51,8 @@ async def handler_manager(data):
     elif data["event_type"] == "EQR":
         asyncio.create_task(eqr.handler(data))
     elif data["event_type"] == "EEW" and data["report_final"] == True:
-        asyncio.create_task(eqr.handler(data))
         await eew_handler_manager(data)
+        asyncio.create_task(eqr.handler(data))
     elif data["event_type"] == "EEW" and data["report_final"] == False:
         await eew_handler_manager(data)
     elif data["event_type"] == "ESP":

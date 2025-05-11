@@ -21,6 +21,10 @@ ass_path = a.get("ass_path")
 
 tts_lock = asyncio.Lock()
 
+# Make sure the cache directory for TTS exists
+if not os.path.exists(os.path.join(t, "TTS")):
+    os.makedirs(os.path.join(t, "TTS"))
+
 # Audios
 audios = {
     "eew": {
@@ -64,8 +68,8 @@ async def get_tts(data: dict):
             int_type = "fc_max_shindo"
         if l["lang"] == "cn":
             voice = "zh-CN-XiaoyiNeural"
-            # 修改引号避免语法错误
-            text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}, {data["region"]}{l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
+            final_report = l["final_report"] if data["report_final"] else ""
+            text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}{final_report}, {data["region"]}{l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
         elif l["lang"] == "en":
             # Not done yet
             return None
@@ -86,7 +90,7 @@ async def get_tts(data: dict):
             return None
     else:
         return None
-    ad_path = os.path.join(t, f"{str(time.time())}_TTS.mp3")
+    ad_path = os.path.join(t, "TTS", f"{str(time.time())}_TTS.mp3")
     # 生成TTS
     for _ in range(3):
         try:
@@ -168,16 +172,30 @@ def get_sound(data):
         output.warn(f"Unknown event type: {data['event_type']}")
         return None
 
+async def audio_player(path: str, lock=False):
+    """
+    Play audio
+    """
+    if lock:
+        await tts_lock.acquire()
+    try:
+        audio_task = asyncio.create_task(asyncio.to_thread(playsound, path))
+        await asyncio.wait_for(audio_task, timeout=60)
+    except Exception as e:
+        output.error(f"Audio player error: {str(e)}")
+    finally:
+        if lock:
+            tts_lock.release()
+
 async def player(data: dict, effect: bool, tts: bool, eew_update: bool):
     # play sound effect
     if effect:
         sound_path = get_sound(data)
         if sound_path:
-            asyncio.create_task(asyncio.to_thread(playsound, sound_path))
+            asyncio.create_task(audio_player(sound_path, False))
     if tts:
         tts_path = await get_tts(data)
         if tts_path:
-            async with tts_lock:
-                playsound(tts_path)
+            asyncio.create_task(audio_player(tts_path, True))
     if eew_update:
-        asyncio.create_task(asyncio.to_thread(playsound, audios["eew"]["update"]))
+        asyncio.create_task(audio_player(audios["eew"]["update"], False))

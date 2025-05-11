@@ -1,5 +1,8 @@
 {
+    "config_version": "5pyA5Zac5qyia2VpdGFyb+mFseS6hu+8gQ==",
     "log_level": "WARN",
+    "save_log": true,
+    "clear_cache": true,
     "podris_server": {"host": "", "port": 11451},
     "podris_token": "",
     "map_tile_server": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/WMTS/tile/1.0.0/Canvas_World_Dark_Gray_Base/default/default028mm/{z}/{y}/{x}/",
