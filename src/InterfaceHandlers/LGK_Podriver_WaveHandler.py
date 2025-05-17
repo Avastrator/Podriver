@@ -40,9 +40,9 @@ def get_travel_timetable(depth: int):
         depth = 700
     return tt[str(depth)]
 
-def get_travel_time(eqtime: str, depth: int, radius: int):
+def get_travel_time(eqtime: str, depth: int, radius: int, wave_type: str = "s"):
     t = get_travel_timetable(depth)
-    # 匹配对应影响半径, tjma2011的标准: 0-50内偶数, 50-200公差为五的数. 200-2000公差为十的数
+    # 匹配对应半径, tjma2011的标准: 0-50内偶数, 50-200公差为五的数. 200-2000公差为十的数
     r = int(radius)
     if r <= 50:
         if r % 2 == 0:
@@ -59,7 +59,10 @@ def get_travel_time(eqtime: str, depth: int, radius: int):
         return nt
     # 取表
     res = [sublist for sublist in t if sublist[0] == r]
-    at = res[0][2]
+    if wave_type == "s":
+        at = res[0][2]
+    else:
+        at = res[0][1]
     nt = at - (datetime.now() - datetime.strptime(eqtime, "%Y-%m-%d %H:%M:%S")).total_seconds()
     return nt
 

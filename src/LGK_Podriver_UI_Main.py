@@ -8,13 +8,21 @@ By Avastrator
 import flet as ft
 import flet_map as map
 import asyncio
+import os
+import json
+import time
 from datetime import datetime
 
 import LGK_Podriver_Args as a
-from LGK_Podriver_Utils import safe_exit
+import LGK_Podriver_Utils as utils
 
 c = a.get("config")
 l = a.get("lang")
+output = a.get("logger")
+
+stg_path = a.get("stg_path")
+tmp_path = a.get("tmp_path")
+ass_path = a.get("ass_path")
 
 def app(page: ft.Page):
     # Vars
@@ -66,13 +74,21 @@ def app(page: ft.Page):
     # Safe exit
     async def window_event(e):
         if e.data == "close":
-            exiting = asyncio.create_task(asyncio.to_thread(safe_exit))
+            exiting_dialog = ft.AlertDialog(modal=True, title=ft.Text(l["shuting_down"]))
+            page.open(exiting_dialog)
+            exiting = asyncio.create_task(asyncio.to_thread(utils.safe_exit))
             await asyncio.wait_for(exiting, timeout=60)
             page.window.destroy()
 
     page.window.prevent_close = True
     page.window.on_event = window_event
+
     # AppBar
+    def always_on_top_changed(e):
+        e.control.checked = not e.control.checked
+        page.window.always_on_top = e.control.checked
+        page.update()
+
     page.appbar = ft.AppBar(
         title=ft.Text(
             f"{l["podriver"]} · {a.get('ipconfig')['region']}",
@@ -81,12 +97,226 @@ def app(page: ft.Page):
         ),
         actions=[
             ft.Text("0000-00-00 00:00:00", size=25, font_family="harmony_b"),
-            ft.IconButton(
-                icon="settings",
-                icon_size=20,
-                padding=15,
-                tooltip=l["setting"],
-            ),
+            ft.PopupMenuButton(
+                tooltip=l["config"],
+                items=[
+                    ft.PopupMenuItem(icon="PUSH_PIN", text=l["always_on_top"], checked=False, on_click=lambda e: always_on_top_changed(e)),
+                    ft.PopupMenuItem(),
+                    ft.PopupMenuItem(icon="settings", text=l["settings"], on_click=lambda e: page.open(settings_dialog))
+                ]
+            )
+        ],
+    )
+
+    # Settings
+    field_width = 400
+    def validate_required_text_field(e):
+        if e.control.value.replace(" ", "") == "":
+            e.control.error_text = l["field_required"]
+            e.control.update()
+        else:
+            e.control.error_text = None
+            e.control.update()
+    def on_settings_save(e):
+        global c
+        try:
+            output.info(f"Saving configuration...: {str(c)}")
+            a.set("config", c)
+            with open(os.path.join(stg_path, "config.conf"), "w", encoding="utf-8") as f:
+                json.dump(c, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            output.error(f"Failed to save configuration: {str(e)}")
+            fail_alert = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(l["fail"]),
+                content=ft.Text(str(e), size=16, font_family="harmony_m"),
+                actions=[
+                    ft.TextButton(l["confirm"], on_click=lambda e: page.close(fail_alert))
+                ],
+            )
+            page.open(fail_alert)
+            return
+        page.close(settings_dialog)
+        success_alert = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(l["success"]),
+            content=ft.Text(l["config_saved_restart_required"], size=16, font_family="harmony_m"),
+            actions=[
+                ft.TextButton(l["confirm"], on_click=lambda e: page.close(success_alert))
+            ]
+        )
+        page.open(success_alert)
+    def on_give_up_settings(e):
+        a.set("config", json.load(open(os.path.join(stg_path, "config.conf"), "r", encoding="utf-8"))) # Reload config
+        page.close(settings_dialog)
+    def on_clean_cache(e):
+        cache_size = utils.cache_clean()
+        e.control.text = f"{l['cache_cleared']} ({round(cache_size, 2)}MB)"
+        e.control.icon = "done"
+        e.control.disabled = True
+        e.control.update()
+        time.sleep(2)
+        e.control.text = l["clean_cache_now"]
+        e.control.icon = None
+        e.control.disabled = False
+        e.control.update()
+
+    settings_dialog = ft.AlertDialog(
+        # NOTE: 哎我操lambda函数内不能直接进行赋值操作，只能通过exec函数来实现咯
+        modal=True,
+        title=ft.Text(l["settings"]),
+        content=ft.Column(
+            alignment=ft.MainAxisAlignment.START,
+            scroll=ft.ScrollMode.AUTO,
+            spacing=15,
+            controls=[
+                ft.Text(l["podris_server_config"], size=20, font_family="harmony_m"),
+                ft.TextField(
+                    expand=True,
+                    label=l["podris_server_host"],
+                    prefix=ft.Text(value="ws:// ", size=16, font_family="harmony_r"),
+                    value=c["podris_server"]["host"],
+                    on_change=lambda e: exec('c["podris_server"]["host"] = e.control.value', {'c': c, 'e': e}),
+                    width=field_width,
+                    on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=l["podris_server_port"],
+                    value=str(c["podris_server"]["port"]),
+                    on_change=lambda e: exec('c["podris_server"]["port"] = int(e.control.value)', {'c': c, 'e': e}),
+                    width=field_width,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    password=True,
+                    can_reveal_password=True,
+                    label=l["podris_server_token"],
+                    value=c["podris_server"]["token"],
+                    on_change=lambda e: exec('c["podris_server"]["token"] = e.control.value', {'c': c, 'e': e}),
+                    width=field_width,
+                    on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=f"{l["source_filter_separated_by_commas"]} ({l["field_optional"]})",
+                    value=",".join(c["source_filter"]),
+                    on_change=lambda e: exec('c["source_filter"] = e.control.value.split(",")', {'c': c, 'e': e}),
+                    width=field_width,
+                ),
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=10,
+                    controls=[
+                        ft.Text(f"{l["source_filter_mode"]}:", size=18, font_family="harmony_l"),
+                        ft.SegmentedButton(
+                            on_change=lambda e: exec('c["source_filter_type"] = list(e.control.selected)[0]', {'c': c, 'e': e}),
+                            selected_icon=ft.Icon("check"),
+                            selected={"blacklist"},
+                            allow_multiple_selection=False,
+                            segments=[
+                                ft.Segment(
+                                    label=ft.Text(l["blacklist"], size=14),
+                                    value="blacklist"
+                                ),
+                                ft.Segment(
+                                    label=ft.Text(l["whitelist"], size=14),
+                                    value="whitelist"
+                                )
+                            ],
+                        ),
+                    ]
+                ),
+                ft.Text(l["map_config"], size=20, font_family="harmony_m"),
+                ft.TextField(
+                    expand=True,
+                    label=l["map_tile_server"],
+                    value=c["map_tile_server"],
+                    on_change=lambda e: exec('c["map_tile_server"] = e.control.value', {'c': c, 'e': e}),
+                    width=field_width,
+                    on_blur=validate_required_text_field,
+                ),
+                ft.Text(l["ip_config"], size=20, font_family="harmony_m"),
+                ft.TextField(
+                    expand=True,
+                    label=f"{l["ip_addr"]} ({l["field_optional"]})",
+                    value=c["ipconfig"]["address"],
+                    on_change=lambda e: exec('c["ipconfig"]["address"] = e.control.value', {'c': c, 'e': e}),
+                    width=field_width,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=l["ip_region"],
+                    value=c["ipconfig"]["region"],
+                    on_change=lambda e: exec('c["ipconfig"]["region"] = e.control.value', {'c': c, 'e': e}),
+                    width=field_width,
+                    on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=l["ip_latitude"],
+                    value=str(int(c["ipconfig"]["location"][0])),
+                    on_change=lambda e: exec('c["ipconfig"]["location"][0] = float(e.control.value)', {'c': c, 'e': e}),
+                    width=field_width,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=l["ip_longitude"],
+                    value=str(int(c["ipconfig"]["location"][1])),
+                    on_change=lambda e: exec('c["ipconfig"]["location"][1] = float(e.control.value)', {'c': c, 'e': e}),
+                    width=field_width,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    on_blur=validate_required_text_field,
+                ),
+                ft.Checkbox(label=l["force_use_custom_config"], value=c["ipconfig"]["force_use"], on_change=lambda e: exec('c["ipconfig"]["force_use"] = e.control.value', {'c': c, 'e': e})),
+                ft.Text(l["ui_config"], size=20, font_family="harmony_m"),
+                ft.TextField(
+                    expand=True,
+                    label=l["eqhistory_control_width"],
+                    value=str(c["ui"]["eqhistory_control_width"]),
+                    on_change=lambda e: exec('c["ui"]["eqhistory_control_width"] = int(e.control.value)', {'c': c, 'e': e}),
+                    width=field_width,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    on_blur=validate_required_text_field,
+                ),
+                ft.Text(l["storage_config"], size=20, font_family="harmony_m"),
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=10,
+                    controls=[
+                        ft.FilledTonalButton(
+                            l["open_storage_folder"],
+                            on_click=lambda e: os.startfile(stg_path)
+                        ),
+                        ft.FilledTonalButton(
+                            l["open_cache_folder"],
+                            on_click=lambda e: os.startfile(tmp_path)
+                        ),
+                        ft.FilledTonalButton(
+                            l["open_assets_folder"],
+                            on_click=lambda e: os.startfile(ass_path)
+                        )
+                    ]
+                ),
+                ft.OutlinedButton(text=l["clean_cache_now"], on_click=lambda e: on_clean_cache(e)),
+                ft.Checkbox(label=l["auto_clean_cache"], value=c["clear_cache"], on_change=lambda e: exec('c["clear_cache"] = e.control.value', {'c': c, 'e': e})),
+                ft.Text(l["debug_config"], size=20, font_family="harmony_m"),
+                ft.Checkbox(label=l["save_log"], value=c["save_log"], on_change=lambda e: exec('c["save_log"] = e.control.value', {'c': c, 'e': e})),
+                ft.Divider(thickness=1),
+                ft.Image(src="PoweredbyProjectPodris.png", width=250, fit=ft.ImageFit.CONTAIN),
+                ft.Text(f"Config Version: {c["config_version"]}", size=12, font_family="harmony_l"),
+                ft.Text(f"Language: {l["lang"]}", size=12, font_family="harmony_l"),
+                ft.Text(f"Podriver Version: {a.get("ver")}", size=12, font_family="harmony_l"),
+            ]
+        ),
+        actions=[
+            ft.TextButton(l["cancel"], on_click=lambda e: on_give_up_settings(e)),
+            ft.TextButton(l["save"], on_click=lambda e: on_settings_save(e)),
         ],
     )
 

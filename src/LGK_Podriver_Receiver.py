@@ -48,6 +48,10 @@ async def handler_manager(data):
             a.get("eew_handlers")[data["event_id"]] = asyncio.create_task(eew.handler(data["event_id"]))
     if isinstance(data, list):
         await eqr.eqlist_handler(data)  # 直接 await 异步函数
+    elif any(i in data.get("event_source", "") for i in c["source_filter"]) and c["source_filter_type"] == "blacklist":
+        return
+    elif any(i not in data.get("event_source", "") for i in c["source_filter"]) and c["source_filter_type"] == "whitelist":
+        return
     elif data["event_type"] == "EQR":
         asyncio.create_task(eqr.handler(data))
     elif data["event_type"] == "EEW" and data["report_final"] == True:
@@ -64,11 +68,13 @@ async def receiver():
     a.set("ws_retrytime", 0)
     def decoder(data):
         return json.loads(str(brotli.decompress(base64.b64decode(data)).decode("utf-8")))
-    
-    await asyncio.sleep(3) # wait for app launch
+
     while True:
         try:
-            async with websockets.connect(ws_url, additional_headers=[("Authorization", f"Bearer {c["podris_token"]}")]) as websocket:
+            while a.get("ref_eqlist_control") == None: # Wait for app launch
+                await asyncio.sleep(0.05)
+                continue
+            async with websockets.connect(ws_url, additional_headers=[("Authorization", f"Bearer {c["podris_server"]["token"]}")]) as websocket:
                 # Handshake
                 message = await websocket.recv()
                 data = decoder(message)

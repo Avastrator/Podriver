@@ -69,7 +69,7 @@ async def get_tts(data: dict):
         if l["lang"] == "cn":
             voice = "zh-CN-XiaoyiNeural"
             final_report = l["final_report"] if data["report_final"] else ""
-            text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}{final_report}, {data["region"]}{l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
+            text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}{final_report}, {data["region"]} {l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
         elif l["lang"] == "en":
             # Not done yet
             return None

@@ -24,6 +24,10 @@ product = "Podriver"
 company = "Longecko Group"
 copyright = "Copyright (C) 2025 by Longecko Group"
 
+[tool.flet.app.startup_screen]
+show = true
+message = "Starting up the app…"
+
 [tool.flet.app]
 path = "src"
 

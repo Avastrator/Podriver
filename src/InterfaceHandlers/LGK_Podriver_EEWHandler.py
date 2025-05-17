@@ -63,7 +63,7 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
     if data["report_final"] == True:
         report_status = l["final_report"]
     else:
-        report_status = str(l["final_report"]).replace("[num]", str(data["report_num"]))
+        report_status = str(l["report_num"]).replace("[num]", str(data["report_num"]))
     return ft.Container(
     border=ft.Border(ft.BorderSide(4, "#009199", -1), ft.BorderSide(4, "#009199", -1), ft.BorderSide(4, "#009199", -1), ft.BorderSide(4, "#009199", -1)),
     border_radius=3,
@@ -176,16 +176,18 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
     )
 )
 
-async def handle_eew_countdown(ref: ft.Ref[ft.Text], eqtime: str, arrive_time: int):
+async def handle_eew_countdown(ref: ft.Ref[ft.Text], arrive_time: int):
     """
     处理地震预警倒计时
     """
-    eqtime = datetime.strptime(eqtime, "%Y-%m-%d %H:%M:%S")
+    final_time_diff = timedelta(seconds=arrive_time)
     try:
         while True:
-            final_time_diff = eqtime + timedelta(seconds=arrive_time) - datetime.now()
+            final_time_diff = final_time_diff - timedelta(seconds=1)
             if final_time_diff.total_seconds() <= 10:
                 ref.current.color = "red"
+            if final_time_diff.total_seconds() <= 5:
+                a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(ipconfig["location"][0], ipconfig["location"][1]), 10)
             if final_time_diff.total_seconds() <= 0:
                 ref.current.value = "00:00"
                 ref.current.update()
@@ -381,7 +383,7 @@ async def handler(event_id: int):
         # Add new UI controls
         control = new_control
         a.get("ref_eew_control").current.controls.append(new_control)
-        countdown_task = asyncio.create_task(handle_eew_countdown(ref_countdown, data["time"], countdown))
+        countdown_task = asyncio.create_task(handle_eew_countdown(ref_countdown, countdown))
         epicenter_mark = new_epicenter_mark
         a.get("ref_map_eew_marks_layer").current.markers.append(new_epicenter_mark)
         for mark in  [m.copy() for m in new_marks]:  # 创建列表副本，避免修改原始列表
