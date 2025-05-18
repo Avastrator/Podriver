@@ -66,15 +66,9 @@ async def get_tts(data: dict):
             int_type = "fc_max_intensity"
         else:
             int_type = "fc_max_shindo"
-        if l["lang"] == "cn":
-            voice = "zh-CN-XiaoyiNeural"
-            final_report = l["final_report"] if data["report_final"] else ""
-            text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}{final_report}, {data["region"]} {l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
-        elif l["lang"] == "en":
-            # Not done yet
-            return None
-        else:
-            return None
+        voice = "zh-CN-XiaoyiNeural"
+        final_report = l["final_report"] if data["report_final"] else ""
+        text = f'{data["event_source"]}{l["eew"]}{l["report_num"].replace("[num]", str(data["report_num"]))}{final_report}, {data["region"]} {l["magnitude_num"].replace("[num]", str(data["magnitude"]))}, {l[int_type]}{u.shindo_to_cn(data["intensity"])}'
     elif data["event_type"] == "EQR":
         if data["int_type"] in ["CSIS", "MMI"]:
             int_type = "max_intensity"
@@ -106,6 +100,8 @@ def get_sound(data):
     """
     Get sound effect by data
     """
+    if isinstance(data, str):
+        return data
     if data["event_type"] == "EEW":
         if data["int_type"] in ["CSIS", "MMI"]:
             if data["intensity"] <= 2:
@@ -189,11 +185,11 @@ async def audio_player(path: str, lock=False):
 
 async def player(data: dict, effect: bool, tts: bool, eew_update: bool):
     # play sound effect
-    if effect:
+    if effect and c["audio"]["play_effect"]:
         sound_path = get_sound(data)
         if sound_path:
             asyncio.create_task(audio_player(sound_path, False))
-    if tts:
+    if tts and c["audio"]["play_tts"]:
         tts_path = await get_tts(data)
         if tts_path:
             asyncio.create_task(audio_player(tts_path, True))

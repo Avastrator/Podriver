@@ -49,8 +49,10 @@ async def handler_manager(data):
     if isinstance(data, list):
         await eqr.eqlist_handler(data)  # 直接 await 异步函数
     elif any(i in data.get("event_source", "") for i in c["source_filter"]) and c["source_filter_type"] == "blacklist":
+        output.warn(f"[{data["event_source"]}] source is in blacklist, ignored.")
         return
     elif any(i not in data.get("event_source", "") for i in c["source_filter"]) and c["source_filter_type"] == "whitelist":
+        output.warn(f"[{data["event_source"]}] source is NOT in whitelist, ignored.")
         return
     elif data["event_type"] == "EQR":
         asyncio.create_task(eqr.handler(data))

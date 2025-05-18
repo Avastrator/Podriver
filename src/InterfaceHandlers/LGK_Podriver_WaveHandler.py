@@ -21,7 +21,7 @@ a.set("eew_area_int_list", {})
 # import travel timetable
 tt = json.load(open(f"{ass_path}/traveltimetable.json", "r", encoding="utf-8"))
 
-frame = c["eew"]["wave_drawing_frame"]
+frame = c["ui"]["wave_drawing_frame"]
 sec_per_frame = 1 / frame
     
 def get_travel_timetable(depth: int):
@@ -81,9 +81,9 @@ async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
             coordinates=map.MapLatitudeLongitude(data["location"][0], data["location"][1]),
             radius=0,
             use_radius_in_meter=True,
-            color=ft.Colors.with_opacity(0.15, c["eew"]["p_wave_color"]),
-            border_color=c["eew"]["p_wave_color"],
-            border_stroke_width=c["eew"]["p_wave_border"],
+            color=ft.Colors.with_opacity(0.15, c["ui"]["p_wave_color"]),
+            border_color=c["ui"]["p_wave_color"],
+            border_stroke_width=c["ui"]["wave_border"],
         )
         while True:
             i += 1
@@ -110,14 +110,14 @@ async def pwave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 on_ground = False
                 r = t * 7
                 t -= 1 # 抵消绘制中途的误差
-                circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["eew"]["p_wave_color"]), 0
+                circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["ui"]["p_wave_color"]), 0
                 sr = 1000 * (r / (t // sec_per_frame + 1))
                 for _ in range(int(t // sec_per_frame)):
                     circle.radius -= sr
                     await asyncio.sleep(sec_per_frame)
                     cc_queue.put_nowait([circle, last_circle])
                     last_circle = circle
-                circle.radius, circle.color, circle.border_stroke_width = 0, ft.Colors.with_opacity(0.15, c["eew"]["p_wave_color"]), c["eew"]["p_wave_border"]
+                circle.radius, circle.color, circle.border_stroke_width = 0, ft.Colors.with_opacity(0.15, c["ui"]["p_wave_color"]), c["ui"]["wave_border"]
                 await asyncio.sleep(t % sec_per_frame)
                 cc_queue.put_nowait([circle, last_circle])
                 last_circle = circle
@@ -154,9 +154,9 @@ async def swave(tt: list, data: dict, cc_queue: asyncio.Queue):
             coordinates=map.MapLatitudeLongitude(data["location"][0], data["location"][1]),
             radius=0,
             use_radius_in_meter=True,
-            color=ft.Colors.with_opacity(0.15, c["eew"]["s_wave_color"]),
-            border_color=c["eew"]["s_wave_color"],
-            border_stroke_width=c["eew"]["s_wave_border"],
+            color=ft.Colors.with_opacity(0.15, c["ui"]["s_wave_color"]),
+            border_color=c["ui"]["s_wave_color"],
+            border_stroke_width=c["ui"]["wave_border"],
         )
         while True:
             i += 1
@@ -183,14 +183,14 @@ async def swave(tt: list, data: dict, cc_queue: asyncio.Queue):
                 on_ground = False
                 r = t * 4
                 t -= 1 # 抵消绘制中途的误差
-                circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["eew"]["s_wave_color"]), 0
+                circle.radius, circle.color, circle.border_stroke_width = 1000 * r, ft.Colors.with_opacity(0.4, c["ui"]["s_wave_color"]), 0
                 sr = 1000 * (r / (t // sec_per_frame + 1))
                 for _ in range(int(t // sec_per_frame)):
                     circle.radius -= sr
                     await asyncio.sleep(sec_per_frame)
                     cc_queue.put_nowait([circle, last_circle])
                     last_circle = circle
-                circle.radius, circle.color, circle.border_stroke_width = 0, ft.Colors.with_opacity(0.15, c["eew"]["s_wave_color"]), c["eew"]["s_wave_border"]
+                circle.radius, circle.color, circle.border_stroke_width = 0, ft.Colors.with_opacity(0.15, c["ui"]["s_wave_color"]), c["ui"]["wave_border"]
                 await asyncio.sleep(t % sec_per_frame)
                 cc_queue.put_nowait([circle, last_circle])
                 last_circle = circle

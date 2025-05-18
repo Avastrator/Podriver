@@ -109,9 +109,9 @@ def app(page: ft.Page):
     )
 
     # Settings
-    field_width = 400
+    field_width = 500
     def validate_required_text_field(e):
-        if e.control.value.replace(" ", "") == "":
+        if str(e.control.value).replace(" ", "") == "":
             e.control.error_text = l["field_required"]
             e.control.update()
         else:
@@ -203,7 +203,7 @@ def app(page: ft.Page):
                     expand=True,
                     label=f"{l["source_filter_separated_by_commas"]} ({l["field_optional"]})",
                     value=",".join(c["source_filter"]),
-                    on_change=lambda e: exec('c["source_filter"] = e.control.value.split(",")', {'c': c, 'e': e}),
+                    on_change=lambda e: exec('c["source_filter"] = [x.strip() for x in e.control.value.split(",") if x.strip()]', {'c': c, 'e': e}),
                     width=field_width,
                 ),
                 ft.Row(
@@ -229,7 +229,7 @@ def app(page: ft.Page):
                         ),
                     ]
                 ),
-                ft.Text(l["map_config"], size=20, font_family="harmony_m"),
+                ft.Text(l["ui_config"], size=20, font_family="harmony_m"),
                 ft.TextField(
                     expand=True,
                     label=l["map_tile_server"],
@@ -237,6 +237,46 @@ def app(page: ft.Page):
                     on_change=lambda e: exec('c["map_tile_server"] = e.control.value', {'c': c, 'e': e}),
                     width=field_width,
                     on_blur=validate_required_text_field,
+                ),
+                ft.TextField(
+                    expand=True,
+                    label=l["eqhistory_control_width"],
+                    suffix=ft.Text(value="px", size=16, font_family="harmony_r"),
+                    value=str(c["ui"]["eqhistory_control_width"]),
+                    on_change=lambda e: exec('c["ui"]["eqhistory_control_width"] = int(e.control.value)', {'c': c, 'e': e}),
+                    width=field_width,
+                    input_filter=ft.NumbersOnlyInputFilter(),
+                    on_blur=validate_required_text_field,
+                ),
+                ft.Column(
+                    spacing=-3,
+                    controls=[
+                        ft.Text(l["eqwave_border_thickness"], size=14, font_family="harmony_r"),
+                        ft.Slider(
+                            expand=True,
+                            label="{value} px",
+                            min=1,
+                            max=10,
+                            divisions=9,
+                            value=c["ui"]["wave_border"],
+                            on_change=lambda e: exec('c["ui"]["wave_border"] = int(e.control.value)', {'c': c, 'e': e}),
+                        )
+                    ]
+                ),
+                ft.Column(
+                    spacing=-3,
+                    controls=[
+                        ft.Text(l["eqwave_frame_rate"], size=14, font_family="harmony_r"),
+                        ft.Slider(
+                            expand=True,
+                            label="{value} FPS",
+                            min=1,
+                            max=20,
+                            divisions=19,
+                            value=c["ui"]["wave_drawing_frame"],
+                            on_change=lambda e: exec('c["ui"]["wave_drawing_frame"] = int(e.control.value)', {'c': c, 'e': e}),
+                        )
+                    ]
                 ),
                 ft.Text(l["ip_config"], size=20, font_family="harmony_m"),
                 ft.TextField(
@@ -254,35 +294,49 @@ def app(page: ft.Page):
                     width=field_width,
                     on_blur=validate_required_text_field,
                 ),
-                ft.TextField(
-                    expand=True,
-                    label=l["ip_latitude"],
-                    value=str(int(c["ipconfig"]["location"][0])),
-                    on_change=lambda e: exec('c["ipconfig"]["location"][0] = float(e.control.value)', {'c': c, 'e': e}),
-                    width=field_width,
-                    input_filter=ft.NumbersOnlyInputFilter(),
-                    on_blur=validate_required_text_field,
-                ),
-                ft.TextField(
-                    expand=True,
-                    label=l["ip_longitude"],
-                    value=str(int(c["ipconfig"]["location"][1])),
-                    on_change=lambda e: exec('c["ipconfig"]["location"][1] = float(e.control.value)', {'c': c, 'e': e}),
-                    width=field_width,
-                    input_filter=ft.NumbersOnlyInputFilter(),
-                    on_blur=validate_required_text_field,
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=5,
+                    controls=[
+                        ft.TextField(
+                            expand=True,
+                            label=l["ip_latitude"],
+                            value=str(int(c["ipconfig"]["location"][0])),
+                            on_change=lambda e: exec('c["ipconfig"]["location"][0] = float(e.control.value)', {'c': c, 'e': e}),
+                            input_filter=ft.NumbersOnlyInputFilter(),
+                            on_blur=validate_required_text_field,
+                        ),
+                        ft.TextField(
+                            expand=True,
+                            label=l["ip_longitude"],
+                            value=str(int(c["ipconfig"]["location"][1])),
+                            on_change=lambda e: exec('c["ipconfig"]["location"][1] = float(e.control.value)', {'c': c, 'e': e}),
+                            input_filter=ft.NumbersOnlyInputFilter(),
+                            on_blur=validate_required_text_field,
+                        )
+                    ]
                 ),
                 ft.Checkbox(label=l["force_use_custom_config"], value=c["ipconfig"]["force_use"], on_change=lambda e: exec('c["ipconfig"]["force_use"] = e.control.value', {'c': c, 'e': e})),
-                ft.Text(l["ui_config"], size=20, font_family="harmony_m"),
-                ft.TextField(
-                    expand=True,
-                    label=l["eqhistory_control_width"],
-                    value=str(c["ui"]["eqhistory_control_width"]),
-                    on_change=lambda e: exec('c["ui"]["eqhistory_control_width"] = int(e.control.value)', {'c': c, 'e': e}),
-                    width=field_width,
-                    input_filter=ft.NumbersOnlyInputFilter(),
-                    on_blur=validate_required_text_field,
+                ft.Text(l["audio_config"], size=20, font_family="harmony_m"),
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=20,
+                    controls=[
+                        ft.Switch(
+                            label=l["play_effect"],
+                            label_style=ft.TextStyle(size=16, font_family="harmony_r"),
+                            value=c["audio"]["play_effect"],
+                            on_change=lambda e: exec('c["audio"]["play_effect"] = e.control.value', {'c': c, 'e': e}),
+                        ),
+                        ft.Switch(
+                            label=l["play_tts"],
+                            label_style=ft.TextStyle(size=16, font_family="harmony_r"),
+                            value=c["audio"]["play_tts"],
+                            on_change=lambda e: exec('c["audio"]["play_tts"] = e.control.value', {'c': c, 'e': e}),
+                        )
+                    ]
                 ),
+                ft.Text(l["custom_effect_tip"], size=12, font_family="harmony_l"),
                 ft.Text(l["storage_config"], size=20, font_family="harmony_m"),
                 ft.Row(
                     alignment=ft.MainAxisAlignment.START,

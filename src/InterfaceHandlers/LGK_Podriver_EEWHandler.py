@@ -77,6 +77,7 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
         controls=[
             ft.Row(
                 alignment=ft.MainAxisAlignment.START,
+                spacing=2,
                 expand=True,
                 controls=[
                     ft.Column( # 上左部分
@@ -86,30 +87,42 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
                             ft.Text(
                                 value="MAX INTENSITY",
                                 font_family="harmony_l",
-                                size=11,
+                                size=9,
                                 color="white",
                             ),
                             ft.Image(
                                 src=intensity_image,
-                                height=80,
-                                width=80,
+                                height=70,
+                                width=70,
                             )
                         ]
                     ),
                     ft.Column( # 上右部分
-                        alignment=ft.MainAxisAlignment.START,
-                        spacing=3,
+                        alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                        spacing=0,
                         expand=True,
                         controls=[
                             ft.Row( # 报数与最终报
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 expand=True,
                                 controls=[
-                                    ft.Text(
-                                        value=f"FROM: {data['event_source']}",
-                                        size=15,
-                                        font_family="harmony_m",
-                                        color="white",
+                                    ft.Row(
+                                        alignment=ft.MainAxisAlignment.START,
+                                        spacing=0,
+                                        controls=[
+                                            ft.Text(
+                                                value=f"FROM: ",
+                                                size=13,
+                                                font_family="harmony_r",
+                                                color="white",
+                                            ),
+                                            ft.Text(
+                                                value=f"{data['event_source']}",
+                                                size=14,
+                                                font_family="harmony_m",
+                                                color="white",
+                                            ),
+                                        ]
                                     ),
                                     ft.Text(
                                         value=report_status,
@@ -121,14 +134,14 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
                             ),
                             ft.Text( # 震中名
                                 value=data["region"],
-                                size=27,
+                                size=24,
                                 font_family="harmony_b",
                                 color="white",
                                 overflow=ft.TextOverflow.ELLIPSIS,
                             ),
                             ft.Text( # 发震时间
                                 value=data["time"],
-                                size=18,
+                                size=14,
                                 font_family="harmony_m",
                                 color="white",
                             ),
@@ -139,37 +152,74 @@ def get_eew_control(data: dict, local_int: int, countdown_ref=ft.Ref[ft.Text]())
             ft.Row( # 下排部分
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 expand=True,
+                spacing=-5,
                 controls=[
-                    ft.Text(
-                        value=f"{data["mag_type"]} {str(data["magnitude"])}",
-                        size=23,
-                        font_family="harmony_m",
-                        color="white",
-                    ),
-                    ft.Text(
-                        value=f"{str(data["depth"])}km",
-                        size=23,
-                        font_family="harmony_m",
-                        color="white",
-                    ),
-                    ft.Row( # 本地烈度
+                    ft.Column(
                         alignment=ft.MainAxisAlignment.START,
-                        spacing=3,
+                        spacing=-5,
                         controls=[
-                            ft.Image(
-                                src=local_intensity_image,
-                                height=28,
-                                width=28,
+                            ft.Text(
+                                value="MAGNITUDE",
+                                font_family="harmony_l",
+                                size=10,
+                                color="white",
                             ),
                             ft.Text(
-                                ref=countdown_ref,
-                                value="00:00",
-                                size=23,
+                                value=f"{data["mag_type"]} {str(data["magnitude"])}",
+                                size=20,
                                 font_family="harmony_m",
                                 color="white",
+                            ),
+                        ]
+                    ),
+                    ft.Column(
+                        alignment=ft.MainAxisAlignment.START,
+                        spacing=-5,
+                        controls=[
+                            ft.Text(
+                                value="DEPTH",
+                                font_family="harmony_l",
+                                size=10,
+                                color="white",
+                            ),
+                            ft.Text(
+                                value=f"{str(data["depth"])}km",
+                                size=20,
+                                font_family="harmony_m",
+                                color="white",
+                            ),
+                        ]
+                    ),
+                    ft.Column(
+                        alignment=ft.MainAxisAlignment.START,
+                        spacing=-3,
+                        controls=[
+                            ft.Text(
+                                value="LOCAL IMPACT",
+                                font_family="harmony_l",
+                                size=10,
+                                color="white",
+                            ),
+                            ft.Row( # 本地烈度
+                                alignment=ft.MainAxisAlignment.START,
+                                spacing=3,
+                                controls=[
+                                    ft.Image(
+                                        src=local_intensity_image,
+                                        height=25,
+                                        width=25,
+                                    ),
+                                    ft.Text(
+                                        ref=countdown_ref,
+                                        value="00:00",
+                                        size=20,
+                                        font_family="harmony_m",
+                                        color="white",
+                                    )
+                                ]
                             )
                         ]
-                    )
+                    ),
                 ]
             )
         ]
@@ -186,12 +236,12 @@ async def handle_eew_countdown(ref: ft.Ref[ft.Text], arrive_time: int):
             final_time_diff = final_time_diff - timedelta(seconds=1)
             if final_time_diff.total_seconds() <= 10:
                 ref.current.color = "red"
-            if final_time_diff.total_seconds() <= 5:
-                a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(ipconfig["location"][0], ipconfig["location"][1]), 10)
             if final_time_diff.total_seconds() <= 0:
                 ref.current.value = "00:00"
                 ref.current.update()
                 return
+            if final_time_diff.total_seconds() <= 5:
+                a.get("ref_map_control").current.center_on(map.MapLatitudeLongitude(ipconfig["location"][0], ipconfig["location"][1]), 10)
             final_minutes, final_seconds = final_time_diff.seconds // 60, final_time_diff.seconds % 60
             ref.current.value = f"{final_minutes:02d}:{final_seconds:02d}"
             ref.current.update()
